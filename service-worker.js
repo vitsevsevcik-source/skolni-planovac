@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "gjak-planner-v1";
+const CACHE_NAME = "gjak-planner-v3";
 const APP_FILES = [
   "./",
   "./index.html",

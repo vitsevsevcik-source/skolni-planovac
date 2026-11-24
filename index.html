@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0a0d0b">
+  <meta name="theme-color" content="#0a1014">
   <meta name="description" content="Přehledný plánovač školních úkolů pro studenty Gymnázia J. A. Komenského v Uherském Brodě.">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Školní plánovač | GJAK Uherský Brod</title>
@@ -117,6 +117,54 @@
         </article>
       </section>
 
+      <section class="week-panel" aria-labelledby="week-heading">
+        <div class="week-heading">
+          <div>
+            <p class="eyebrow">TÝDENNÍ PŘEHLED</p>
+            <h2 id="week-heading">Rozvrh a úkoly</h2>
+          </div>
+          <div class="week-controls" aria-label="Navigace týdnů">
+            <button type="button" id="week-previous" aria-label="Předchozí týden">←</button>
+            <button type="button" id="week-current">Tento týden</button>
+            <button type="button" id="week-next" aria-label="Následující týden">→</button>
+          </div>
+        </div>
+        <p class="week-range" id="week-range" aria-live="polite"></p>
+        <div class="reminder-banner" id="reminder-banner" role="status" aria-live="polite" hidden>
+          <span aria-hidden="true">!</span><p id="reminder-text"></p>
+        </div>
+        <div class="week-grid" id="week-grid"></div>
+        <details class="timetable-editor">
+          <summary>Upravit opakující se rozvrh hodin</summary>
+          <form id="schedule-form" class="schedule-form">
+            <div class="schedule-field">
+              <label for="schedule-day">Den</label>
+              <select id="schedule-day" name="weekday" required>
+                <option value="1">Pondělí</option><option value="2">Úterý</option><option value="3">Středa</option>
+                <option value="4">Čtvrtek</option><option value="5">Pátek</option><option value="6">Sobota</option><option value="7">Neděle</option>
+              </select>
+            </div>
+            <div class="schedule-field">
+              <label for="schedule-start">Od</label>
+              <input id="schedule-start" name="start" type="time" required>
+            </div>
+            <div class="schedule-field">
+              <label for="schedule-end">Do</label>
+              <input id="schedule-end" name="end" type="time" required>
+            </div>
+            <div class="schedule-field schedule-subject-field">
+              <label for="schedule-subject">Předmět</label>
+              <input id="schedule-subject" name="subject" type="text" maxlength="60" placeholder="Např. Matematika" required>
+            </div>
+            <div class="schedule-field">
+              <label for="schedule-room">Učebna (volitelné)</label>
+              <input id="schedule-room" name="room" type="text" maxlength="30" placeholder="Např. 204">
+            </div>
+            <button class="schedule-submit" type="submit">＋ Přidat hodinu</button>
+          </form>
+        </details>
+      </section>
+
       <section class="planner-layout">
         <div class="task-panel">
           <div class="section-heading">
@@ -129,6 +177,28 @@
               <select id="sort-select" aria-label="Řadit úkoly">
                 <option value="date">Podle termínu</option>
                 <option value="created">Nejnovější</option>
+              </select>
+            </label>
+          </div>
+          <div class="task-filters" aria-label="Vyhledávání a filtrování úkolů">
+            <label class="search-field" for="task-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="task-search" type="search" placeholder="Hledat v úkolech…" autocomplete="off">
+            </label>
+            <label class="filter-field" for="subject-filter">
+              <span class="visually-hidden">Filtrovat podle předmětu</span>
+              <select id="subject-filter">
+                <option value="">Všechny předměty</option>
+                <option>Český jazyk</option><option>Anglický jazyk</option><option>Matematika</option>
+                <option>Dějepis</option><option>Fyzika</option><option>Chemie</option><option>Biologie</option>
+                <option>Zeměpis</option><option>Informatika</option><option>Jiný</option>
+              </select>
+            </label>
+            <label class="filter-field" for="priority-filter">
+              <span class="visually-hidden">Filtrovat podle důležitosti</span>
+              <select id="priority-filter">
+                <option value="">Všechny priority</option>
+                <option value="high">Vysoká</option><option value="normal">Běžná</option><option value="low">Nízká</option>
               </select>
             </label>
           </div>
@@ -168,7 +238,12 @@
             </div>
             <button class="submit-button" type="submit"><span aria-hidden="true">＋</span> Přidat úkol</button>
           </form>
-          <p class="privacy-note"><span aria-hidden="true">▣</span> Tvé úkoly zůstávají uložené jen v tomto prohlížeči.</p>
+          <p class="privacy-note"><span aria-hidden="true">▣</span> Úkoly i rozvrh se ukládají jen v tomto prohlížeči.</p>
+          <div class="data-tools" aria-label="Záloha úkolů a rozvrhu">
+            <button type="button" id="export-data">↓ Stáhnout zálohu</button>
+            <button type="button" id="import-data">↑ Obnovit ze zálohy</button>
+            <input id="import-data-file" type="file" accept="application/json,.json" hidden>
+          </div>
         </aside>
       </section>
 

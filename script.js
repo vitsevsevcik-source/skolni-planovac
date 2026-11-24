@@ -1,9 +1,11 @@
 "use strict";
 
 const STORAGE_KEY = "gjak-school-planner-tasks-v1";
+const SCHEDULE_STORAGE_KEY = "gjak-school-planner-schedule-v1";
 const THEME_STORAGE_KEY = "gjak-school-planner-theme-v1";
 const taskList = document.getElementById("task-list");
 const taskForm = document.getElementById("task-form");
+const scheduleForm = document.getElementById("schedule-form");
 const taskTitleInput = document.getElementById("task-title");
 const toast = document.getElementById("toast");
 const themeToggle = document.getElementById("theme-toggle");
@@ -16,6 +18,8 @@ const filterLabels = {
 };
 let activeFilter = "all";
 let tasks = loadTasks();
+let schedule = loadSchedule();
+let weekOffset = 0;
 let toastTimeout;
 
 function getSavedTheme() {
@@ -37,7 +41,7 @@ function applyTheme(theme) {
   themeToggle.setAttribute("aria-pressed", String(isDark));
   document.getElementById("theme-label").textContent = label;
   document.getElementById("theme-icon").textContent = isDark ? "☼" : "◐";
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#0a0d0b" : "#f1f3eb");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#0a1014" : "#e7ecee");
 }
 
 applyTheme(getSavedTheme());
@@ -79,6 +83,37 @@ function loadTasks() {
   }
 }
 
+function isValidScheduleEntry(entry) {
+  return entry &&
+    typeof entry.id === "string" &&
+    Number.isInteger(entry.weekday) && entry.weekday >= 1 && entry.weekday <= 7 &&
+    typeof entry.start === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(entry.start) &&
+    typeof entry.end === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(entry.end) &&
+    entry.end > entry.start &&
+    typeof entry.subject === "string" && entry.subject.trim().length > 0 &&
+    (entry.room === undefined || typeof entry.room === "string");
+}
+
+function loadSchedule() {
+  try {
+    const saved = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+    if (saved === null) return [];
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) throw new TypeError("Uložený rozvrh nemá očekávaný formát.");
+    const validEntries = parsed.filter(isValidScheduleEntry);
+    if (validEntries.length !== parsed.length) {
+      const error = new TypeError("Rozvrh obsahuje neplatné položky.");
+      showToast("Některé položky rozvrhu jsou poškozené a nebyly načteny.");
+      console.error("Část rozvrhu se nepodařilo načíst:", error);
+    }
+    return validEntries;
+  } catch (error) {
+    showToast("Uložený rozvrh se nepodařilo načíst. Zkontroluj úložiště prohlížeče.");
+    console.error("Načtení rozvrhu selhalo:", error);
+    return [];
+  }
+}
+
 function saveTasks() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -86,6 +121,17 @@ function saveTasks() {
   } catch (error) {
     showToast("Změna se nepodařila uložit do tohoto prohlížeče. Zkontroluj dostupné úložiště.");
     console.error("Uložení školních úkolů selhalo:", error);
+    return false;
+  }
+}
+
+function saveSchedule() {
+  try {
+    localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
+    return true;
+  } catch (error) {
+    showToast("Rozvrh se nepodařilo uložit. Zkontroluj dostupné úložiště prohlížeče.");
+    console.error("Uložení rozvrhu selhalo:", error);
     return false;
   }
 }
@@ -113,10 +159,16 @@ function updateDateHeading() {
 
 function getVisibleTasks() {
   const today = localDateKey(new Date());
+  const search = document.getElementById("task-search").value.trim().toLocaleLowerCase("cs-CZ");
+  const subjectFilter = document.getElementById("subject-filter").value;
+  const priorityFilter = document.getElementById("priority-filter").value;
   const visible = tasks.filter((task) => {
-    if (activeFilter === "today") return !task.completed && task.dueDate === today;
-    if (activeFilter === "upcoming") return !task.completed && task.dueDate && task.dueDate > today;
-    if (activeFilter === "completed") return task.completed;
+    if (activeFilter === "today" && (task.completed || task.dueDate !== today)) return false;
+    if (activeFilter === "upcoming" && (task.completed || !task.dueDate || task.dueDate <= today)) return false;
+    if (activeFilter === "completed" && !task.completed) return false;
+    if (search && !`${task.title} ${task.subject || ""}`.toLocaleLowerCase("cs-CZ").includes(search)) return false;
+    if (subjectFilter && task.subject !== subjectFilter) return false;
+    if (priorityFilter && (task.priority || "normal") !== priorityFilter) return false;
     return true;
   });
 
@@ -131,6 +183,119 @@ function getVisibleTasks() {
     });
   }
   return visible;
+}
+
+function getWeekDates() {
+  const today = new Date();
+  const mondayOffset = (today.getDay() + 6) % 7;
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayOffset + weekOffset * 7);
+  return Array.from({ length: 7 }, (_, index) =>
+    new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + index)
+  );
+}
+
+function renderReminder() {
+  const today = localDateKey(new Date());
+  const overdue = tasks.filter((task) => !task.completed && task.dueDate && task.dueDate < today).length;
+  const dueToday = tasks.filter((task) => !task.completed && task.dueDate === today).length;
+  const banner = document.getElementById("reminder-banner");
+  const message = document.getElementById("reminder-text");
+  if (overdue === 0 && dueToday === 0) {
+    banner.hidden = true;
+    return;
+  }
+  const parts = [];
+  if (overdue) parts.push(`${overdue} ${overdue === 1 ? "úkol je po termínu" : "úkoly jsou po termínu"}`);
+  if (dueToday) parts.push(`${dueToday} ${dueToday === 1 ? "úkol má termín dnes" : "úkoly mají termín dnes"}`);
+  message.textContent = `${parts.join(" a ")}. Nezapomeň je zkontrolovat.`;
+  banner.hidden = false;
+}
+
+function renderWeek() {
+  const dates = getWeekDates();
+  const dateFormatter = new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "short" });
+  const weekdayFormatter = new Intl.DateTimeFormat("cs-CZ", { weekday: "long" });
+  document.getElementById("week-range").textContent =
+    `${dateFormatter.format(dates[0])} – ${dateFormatter.format(dates[6])} ${dates[6].getFullYear()}`;
+
+  const grid = document.getElementById("week-grid");
+  grid.replaceChildren();
+  dates.forEach((date) => {
+    const dateKey = localDateKey(date);
+    const weekday = date.getDay() || 7;
+    const dayTasks = tasks.filter((task) => task.dueDate === dateKey);
+    const pendingCount = dayTasks.filter((task) => !task.completed).length;
+    const daySchedule = schedule
+      .filter((entry) => entry.weekday === weekday)
+      .sort((a, b) => a.start.localeCompare(b.start));
+    const commitmentCount = pendingCount + daySchedule.length;
+    const day = document.createElement("article");
+    day.className = `week-day${dateKey === localDateKey(new Date()) ? " is-today" : ""}`;
+
+    const heading = document.createElement("div");
+    heading.className = "week-day-heading";
+    const dayName = document.createElement("h3");
+    dayName.textContent = weekdayFormatter.format(date);
+    const dayDate = document.createElement("span");
+    dayDate.textContent = dateFormatter.format(date);
+    heading.append(dayName, dayDate);
+
+    const load = document.createElement("p");
+    load.className = `day-load${commitmentCount >= 7 ? " is-heavy" : commitmentCount >= 4 ? " is-medium" : commitmentCount > 0 ? " is-light" : ""}`;
+    const loadLabel = commitmentCount >= 7 ? "Nabitý den" : commitmentCount >= 4 ? "Střední zátěž" : commitmentCount > 0 ? "Volnější den" : "Klidný den";
+    load.textContent = `${loadLabel} · ${pendingCount} úkolů, ${daySchedule.length} hodin`;
+    day.append(heading, load);
+
+    if (daySchedule.length) {
+      const lessonHeading = document.createElement("p");
+      lessonHeading.className = "week-group-label";
+      lessonHeading.textContent = "ROZVRH";
+      day.append(lessonHeading);
+      daySchedule.forEach((entry) => {
+        const lesson = document.createElement("div");
+        lesson.className = "week-lesson";
+        const time = document.createElement("span");
+        time.className = "week-item-time";
+        time.textContent = `${entry.start}–${entry.end}`;
+        const subject = document.createElement("strong");
+        subject.textContent = entry.subject;
+        const room = document.createElement("span");
+        room.className = "week-item-detail";
+        room.textContent = entry.room || "";
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "schedule-delete";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Odebrat ${entry.subject} z rozvrhu`);
+        remove.addEventListener("click", () => deleteScheduleEntry(entry.id));
+        lesson.append(time, subject);
+        if (entry.room) lesson.append(room);
+        lesson.append(remove);
+        day.append(lesson);
+      });
+    }
+
+    if (dayTasks.length) {
+      const taskHeading = document.createElement("p");
+      taskHeading.className = "week-group-label";
+      taskHeading.textContent = "ÚKOLY";
+      day.append(taskHeading);
+      dayTasks.forEach((task) => {
+        const taskItem = document.createElement("p");
+        taskItem.className = `week-task${task.completed ? " is-completed" : ""}`;
+        taskItem.textContent = task.title;
+        day.append(taskItem);
+      });
+    }
+
+    if (!daySchedule.length && !dayTasks.length) {
+      const empty = document.createElement("p");
+      empty.className = "week-day-empty";
+      empty.textContent = "Zatím nic naplánováno";
+      day.append(empty);
+    }
+    grid.append(day);
+  });
 }
 
 function formatDueDate(dateValue) {
@@ -215,7 +380,8 @@ function renderTasks() {
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = activeFilter === "completed" ? "✓" : "✎";
     const title = document.createElement("strong");
-    title.textContent = activeFilter === "completed" ? "Zatím žádné hotové úkoly" : activeFilter === "today" ? "Na dnešek nemáš žádný úkol" : activeFilter === "upcoming" ? "Žádné nadcházející úkoly" : "Tvůj seznam je zatím prázdný";
+    const hasSearch = document.getElementById("task-search").value || document.getElementById("subject-filter").value || document.getElementById("priority-filter").value;
+    title.textContent = hasSearch ? "Žádné úkoly neodpovídají výběru" : activeFilter === "completed" ? "Zatím žádné hotové úkoly" : activeFilter === "today" ? "Na dnešek nemáš žádný úkol" : activeFilter === "upcoming" ? "Žádné nadcházející úkoly" : "Tvůj seznam je zatím prázdný";
     const description = document.createElement("p");
     description.textContent = activeFilter === "all" ? "Přidej si první úkol a měj své studium pod kontrolou." : "Až se objeví nové úkoly, najdeš je právě tady.";
     empty.append(icon, title, description);
@@ -234,6 +400,8 @@ function renderTasks() {
   document.getElementById("visible-count").textContent = visibleTasks.length;
   document.getElementById("list-title").childNodes[0].textContent = filterLabels[activeFilter] + " ";
   document.getElementById("breadcrumb-current").textContent = filterLabels[activeFilter];
+  renderWeek();
+  renderReminder();
 }
 
 function toggleTask(id) {
@@ -246,6 +414,124 @@ function deleteTask(id) {
   tasks = tasks.filter((task) => task.id !== id);
   saveTasks();
   renderTasks();
+}
+
+function deleteScheduleEntry(id) {
+  schedule = schedule.filter((entry) => entry.id !== id);
+  saveSchedule();
+  renderTasks();
+}
+
+function isValidBackupTask(task) {
+  if (!task || typeof task.id !== "string" || typeof task.title !== "string" ||
+      task.title.trim().length === 0 || task.title.length > 120 || typeof task.completed !== "boolean") {
+    return false;
+  }
+  if (task.subject !== undefined && (typeof task.subject !== "string" || task.subject.length > 60)) return false;
+  if (task.dueDate !== undefined && task.dueDate !== "") {
+    if (typeof task.dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate)) return false;
+    const date = new Date(`${task.dueDate}T00:00:00`);
+    if (Number.isNaN(date.getTime()) || localDateKey(date) !== task.dueDate) return false;
+  }
+  if (task.priority !== undefined && !["low", "normal", "high"].includes(task.priority)) return false;
+  return task.createdAt === undefined || (typeof task.createdAt === "number" && Number.isFinite(task.createdAt));
+}
+
+function parseBackup(data) {
+  if (!data || data.format !== "gjak-planner-backup" || data.version !== 1 ||
+      !Array.isArray(data.tasks) || !Array.isArray(data.schedule)) {
+    throw new TypeError("Soubor není platná záloha školního plánovače.");
+  }
+  if (!data.tasks.every(isValidBackupTask) || !data.schedule.every(isValidScheduleEntry)) {
+    throw new TypeError("Záloha obsahuje poškozený nebo neplatný úkol či hodinu.");
+  }
+  return {
+    tasks: data.tasks.map((task) => ({
+      id: task.id,
+      title: task.title.trim(),
+      subject: task.subject || "",
+      dueDate: task.dueDate || "",
+      priority: task.priority || "normal",
+      completed: task.completed,
+      createdAt: task.createdAt || 0
+    })),
+    schedule: data.schedule.map((entry) => ({
+      id: entry.id,
+      weekday: entry.weekday,
+      start: entry.start,
+      end: entry.end,
+      subject: entry.subject.trim(),
+      room: entry.room || ""
+    }))
+  };
+}
+
+function exportBackup() {
+  try {
+    const backup = {
+      format: "gjak-planner-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tasks,
+      schedule
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `skolni-planovac-zaloha-${localDateKey(new Date())}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast("Záloha úkolů a rozvrhu byla stažena.");
+  } catch (error) {
+    console.error("Export zálohy selhal:", error);
+    showToast("Zálohu se nepodařilo vytvořit.");
+  }
+}
+
+function saveImportedBackup(backup) {
+  try {
+    const previousTasks = localStorage.getItem(STORAGE_KEY);
+    const previousSchedule = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.tasks));
+      localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(backup.schedule));
+    } catch (error) {
+      try {
+        if (previousTasks === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, previousTasks);
+        if (previousSchedule === null) localStorage.removeItem(SCHEDULE_STORAGE_KEY);
+        else localStorage.setItem(SCHEDULE_STORAGE_KEY, previousSchedule);
+      } catch (restoreError) {
+        console.error("Obnovení původních dat po chybě importu selhalo:", restoreError);
+      }
+      throw error;
+    }
+    return true;
+  } catch (error) {
+    console.error("Uložení importované zálohy selhalo:", error);
+    showToast("Zálohu se nepodařilo uložit. Zkontroluj dostupné úložiště.");
+    return false;
+  }
+}
+
+async function importBackup(file) {
+  try {
+    const backup = parseBackup(JSON.parse(await file.text()));
+    const taskCountLabel = backup.tasks.length === 1 ? "úkol" : backup.tasks.length >= 2 && backup.tasks.length <= 4 ? "úkoly" : "úkolů";
+    const lessonCountLabel = backup.schedule.length === 1 ? "hodinu" : backup.schedule.length >= 2 && backup.schedule.length <= 4 ? "hodiny" : "hodin";
+    if (!window.confirm(`Obnovit ${backup.tasks.length} ${taskCountLabel} a ${backup.schedule.length} ${lessonCountLabel}? Stávající data se nahradí.`)) return;
+    if (!saveImportedBackup(backup)) return;
+    tasks = backup.tasks;
+    schedule = backup.schedule;
+    renderTasks();
+    showToast("Záloha úkolů a rozvrhu byla obnovena.");
+  } catch (error) {
+    console.error("Import zálohy selhal:", error);
+    showToast(error instanceof SyntaxError ? "Soubor neobsahuje platný JSON." : error.message || "Zálohu se nepodařilo načíst.");
+  }
 }
 
 taskForm.addEventListener("submit", (event) => {
@@ -272,6 +558,29 @@ taskForm.addEventListener("submit", (event) => {
   taskTitleInput.focus();
 });
 
+scheduleForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const formData = new FormData(scheduleForm);
+  const start = String(formData.get("start") || "");
+  const end = String(formData.get("end") || "");
+  const subject = String(formData.get("subject") || "").trim();
+  if (!subject || end <= start) {
+    showToast("Zkontroluj předmět a čas hodiny. Konec musí být po začátku.");
+    return;
+  }
+  schedule.push({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    weekday: Number(formData.get("weekday")),
+    start,
+    end,
+    subject,
+    room: String(formData.get("room") || "").trim()
+  });
+  saveSchedule();
+  scheduleForm.reset();
+  renderTasks();
+});
+
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => {
     activeFilter = button.dataset.filter;
@@ -281,6 +590,30 @@ document.querySelectorAll(".nav-link").forEach((button) => {
 });
 
 document.getElementById("sort-select").addEventListener("change", renderTasks);
+document.getElementById("task-search").addEventListener("input", renderTasks);
+document.getElementById("subject-filter").addEventListener("change", renderTasks);
+document.getElementById("priority-filter").addEventListener("change", renderTasks);
+document.getElementById("week-previous").addEventListener("click", () => {
+  weekOffset -= 1;
+  renderWeek();
+});
+document.getElementById("week-next").addEventListener("click", () => {
+  weekOffset += 1;
+  renderWeek();
+});
+document.getElementById("week-current").addEventListener("click", () => {
+  weekOffset = 0;
+  renderWeek();
+});
+document.getElementById("export-data").addEventListener("click", exportBackup);
+const importFileInput = document.getElementById("import-data-file");
+document.getElementById("import-data").addEventListener("click", () => importFileInput.click());
+importFileInput.addEventListener("change", async (event) => {
+  const input = event.currentTarget;
+  const file = input.files && input.files[0];
+  if (file) await importBackup(file);
+  input.value = "";
+});
 updateDateHeading();
 renderTasks();
 
