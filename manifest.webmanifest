@@ -1,0 +1,32 @@
+{
+  "id": "./",
+  "name": "Školní plánovač GJAK",
+  "short_name": "Plánovač GJAK",
+  "description": "Plánovač školních úkolů pro studenty GJAK Uherský Brod.",
+  "lang": "cs",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d0b",
+  "theme_color": "#0a0d0b",
+  "icons": [
+    {
+      "src": "./app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

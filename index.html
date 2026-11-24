@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0d0b">
+  <meta name="description" content="Přehledný plánovač školních úkolů pro studenty Gymnázia J. A. Komenského v Uherském Brodě.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Školní plánovač | GJAK Uherský Brod</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="app-icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Hlavní navigace">
+      <a class="brand" href="#" aria-label="Školní plánovač – úvod">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 4.75h14a1.25 1.25 0 0 1 1.25 1.25v14L12 16l-8.25 4V6A1.25 1.25 0 0 1 5 4.75Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.5 10 2.2 2.2 4.8-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="brand-copy"><strong>Školní plánovač</strong><small>GJAK · Uherský Brod</small></span>
+      </a>
+
+      <div class="sidebar-label">SYSTÉM · PŘEHLED</div>
+      <nav class="main-nav">
+        <button class="nav-link is-active" type="button" data-filter="all">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>
+          Všechny úkoly <span class="nav-count" id="all-count">0</span>
+        </button>
+        <button class="nav-link" type="button" data-filter="today">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.75" y="5.75" width="16.5" height="14.5" rx="2"/><path d="M8 3.75v4M16 3.75v4M4 10h16"/></svg>
+          Na dnes <span class="nav-count" id="today-count">0</span>
+        </button>
+        <button class="nav-link" type="button" data-filter="upcoming">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5h16M6.5 15l4-4 3 2.5 5-6"/><path d="M15.5 7.5h3v3"/></svg>
+          Nadcházející
+        </button>
+        <button class="nav-link" type="button" data-filter="completed">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.25"/><path d="m8.5 12 2.25 2.25 4.75-5"/></svg>
+          Hotové
+        </button>
+      </nav>
+
+      <div class="sidebar-label shortcuts-label">ŠKOLNÍ ODKAZY</div>
+      <nav class="quick-links" aria-label="Rychlé školní odkazy">
+        <a class="quick-link" href="https://bakalari.gjak.cz" target="_blank" rel="noopener noreferrer">
+          <span class="quick-icon icon-bakalari">B</span><span>Bakaláři</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+        <a class="quick-link" href="https://www.office.com/" target="_blank" rel="noopener noreferrer">
+          <span class="quick-icon icon-teams">T</span><span>Microsoft Teams</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+        <a class="quick-link" href="https://www.strava.cz/strava/stravnik/prihlaseni?&zarizeni=0536" target="_blank" rel="noopener noreferrer">
+          <span class="quick-icon icon-strava">S</span><span>Strava · objednávky</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+        <a class="quick-link" href="http://www.strava.cz/foxisapi/foxisapi.dll/istravne.istravne.process?Form1Jidelnicky&zarizeni=0536" target="_blank" rel="noopener noreferrer">
+          <span class="quick-icon icon-menu">J</span><span>Jídelní lístek</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+        <a class="quick-link" href="steam://open/games">
+          <span class="quick-icon icon-steam">S</span><span>Steam · spustit hry</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+        <a class="quick-link" href="https://store.steampowered.com/" target="_blank" rel="noopener noreferrer">
+          <span class="quick-icon icon-steam">S</span><span>Steam · obchod</span><span class="external-mark" aria-hidden="true">↗</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="online-dot" aria-hidden="true"></span>
+        <span>Úkoly se ukládají do tohoto zařízení</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="breadcrumb">Můj prostor <span>/</span> <strong id="breadcrumb-current">Všechny úkoly</strong></div>
+        <div class="topbar-actions">
+          <a class="school-link" href="https://gjak.cz" target="_blank" rel="noopener noreferrer">
+            <span class="school-emblem" aria-hidden="true">G</span>
+            <span><strong>Gymnázium J. A. Komenského</strong><small>Uherský Brod</small></span>
+            <span class="external-mark" aria-hidden="true">↗</span>
+          </a>
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Přepnout na světlý režim" aria-pressed="true" title="Přepnout vzhled">
+            <span class="theme-icon" id="theme-icon" aria-hidden="true">☼</span>
+            <span id="theme-label">Světlý režim</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="welcome-section">
+        <div>
+          <p class="eyebrow" id="today-label">STUDIJNÍ TERMINÁL · UHERSKÝ BROD</p>
+          <h1 id="greeting">Připrav plán. Splň misi.</h1>
+          <p class="welcome-text">Tvoje školní mise, termíny a úkoly přehledně na jednom místě. Soustřeď se na další krok.</p>
+        </div>
+        <div class="welcome-decoration" aria-hidden="true">
+          <span class="sun-shape"></span><span class="deco-star star-one">✳</span><span class="deco-star star-two">✦</span>
+          <span class="deco-note"><span>✎</span></span>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Souhrn úkolů">
+        <article class="summary-card">
+          <span class="summary-icon icon-lilac" aria-hidden="true">▤</span>
+          <div><p>Celkem úkolů</p><strong id="summary-total">0</strong></div>
+          <span class="summary-caption">v tvém seznamu</span>
+        </article>
+        <article class="summary-card">
+          <span class="summary-icon icon-peach" aria-hidden="true">◷</span>
+          <div><p>Čeká na tebe</p><strong id="summary-pending">0</strong></div>
+          <span class="summary-caption">ještě nedokončeno</span>
+        </article>
+        <article class="summary-card">
+          <span class="summary-icon icon-mint" aria-hidden="true">✓</span>
+          <div><p>Hotovo</p><strong id="summary-completed">0</strong></div>
+          <span class="summary-caption">splněných úkolů</span>
+        </article>
+      </section>
+
+      <section class="planner-layout">
+        <div class="task-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">TVŮJ PLÁN</p>
+              <h2 id="list-title">Všechny úkoly <span class="heading-count" id="visible-count">0</span></h2>
+            </div>
+            <label class="sort-control" for="sort-select">
+              <span>Řadit:</span>
+              <select id="sort-select" aria-label="Řadit úkoly">
+                <option value="date">Podle termínu</option>
+                <option value="created">Nejnovější</option>
+              </select>
+            </label>
+          </div>
+          <div class="task-list" id="task-list" aria-live="polite"></div>
+        </div>
+
+        <aside class="add-panel">
+          <div class="add-panel-heading">
+            <span class="add-icon" aria-hidden="true">＋</span>
+            <div><p class="eyebrow">NAPLÁNUJ SI TO</p><h2>Nový úkol</h2></div>
+          </div>
+          <form id="task-form">
+            <label for="task-title">Co je potřeba udělat? <span class="required-mark">*</span></label>
+            <input id="task-title" name="title" type="text" maxlength="120" placeholder="Např. Dokončit referát z dějepisu" required>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="task-subject">Předmět</label>
+                <select id="task-subject" name="subject">
+                  <option value="">Vyber předmět</option>
+                  <option>Český jazyk</option><option>Anglický jazyk</option><option>Matematika</option>
+                  <option>Dějepis</option><option>Fyzika</option><option>Chemie</option><option>Biologie</option>
+                  <option>Zeměpis</option><option>Informatika</option><option>Jiný</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="task-date">Termín</label>
+                <input id="task-date" name="dueDate" type="date">
+              </div>
+            </div>
+
+            <label for="task-priority">Důležitost</label>
+            <div class="priority-options">
+              <label class="priority-choice"><input type="radio" name="priority" value="low"><span><i class="priority-dot low-dot"></i> Nízká</span></label>
+              <label class="priority-choice"><input type="radio" name="priority" value="normal" checked><span><i class="priority-dot normal-dot"></i> Běžná</span></label>
+              <label class="priority-choice"><input type="radio" name="priority" value="high"><span><i class="priority-dot high-dot"></i> Vysoká</span></label>
+            </div>
+            <button class="submit-button" type="submit"><span aria-hidden="true">＋</span> Přidat úkol</button>
+          </form>
+          <p class="privacy-note"><span aria-hidden="true">▣</span> Tvé úkoly zůstávají uložené jen v tomto prohlížeči.</p>
+        </aside>
+      </section>
+
+      <footer class="page-footer">Vytvořeno pro pohodovější školní dny <span aria-hidden="true">✦</span></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
